@@ -23,36 +23,17 @@ app.get("/api/hello", function (req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-// ✅ Timestamp API: current date/time
-app.get("/api", (req, res) => {
-  const now = new Date();
+// ✅ WHOAMI API endpoint
+app.get("/api/whoami", (req, res) => {
+  // get IP address, language, and software info from headers
+  const ipaddress = req.ip || req.connection.remoteAddress;
+  const language = req.headers["accept-language"];
+  const software = req.headers["user-agent"];
+
   res.json({
-    unix: now.getTime(),
-    utc: now.toUTCString()
-  });
-});
-
-// ✅ Timestamp API: handle date parameter
-app.get("/api/:date", (req, res) => {
-  const dateParam = req.params.date;
-  let date;
-
-  // Check if the input is an integer (timestamp)
-  if (/^\d+$/.test(dateParam)) {
-    date = new Date(parseInt(dateParam));
-  } else {
-    date = new Date(dateParam);
-  }
-
-  // Handle invalid date
-  if (date.toString() === "Invalid Date") {
-    return res.json({ error: "Invalid Date" });
-  }
-
-  // Valid date → return both unix and utc
-  res.json({
-    unix: date.getTime(),
-    utc: date.toUTCString()
+    ipaddress: ipaddress,
+    language: language,
+    software: software
   });
 });
 
