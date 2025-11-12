@@ -6,8 +6,6 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dns = require('dns');
-const urlParser = require('url');
-
 const app = express();
 
 // Basic Configuration
@@ -35,7 +33,7 @@ let counter = 1;
 app.post('/api/shorturl', (req, res) => {
   const originalUrl = req.body.url;
 
-  // Parse and validate URL
+  // Validate URL structure
   let hostname;
   try {
     const parsedUrl = new URL(originalUrl);
@@ -44,14 +42,16 @@ app.post('/api/shorturl', (req, res) => {
     return res.json({ error: 'invalid url' });
   }
 
-  // DNS lookup to validate host
+  // Verify domain exists using DNS lookup
   dns.lookup(hostname, (err) => {
     if (err) {
       return res.json({ error: 'invalid url' });
     } else {
-      // Store the URL
       const shortUrl = counter++;
-      urlDatabase.push({ original_url: originalUrl, short_url: shortUrl });
+      urlDatabase.push({
+        original_url: originalUrl,
+        short_url: shortUrl
+      });
 
       res.json({
         original_url: originalUrl,
@@ -61,10 +61,9 @@ app.post('/api/shorturl', (req, res) => {
   });
 });
 
-// GET endpoint to redirect to original URL
+// GET endpoint to redirect short URL
 app.get('/api/shorturl/:short_url', (req, res) => {
   const shortUrl = parseInt(req.params.short_url);
-
   const record = urlDatabase.find(obj => obj.short_url === shortUrl);
 
   if (record) {
@@ -74,7 +73,7 @@ app.get('/api/shorturl/:short_url', (req, res) => {
   }
 });
 
-// Start server
+// Start the server
 app.listen(port, () => {
   console.log(`Your app is listening on port ${port}`);
 });
