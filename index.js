@@ -1,43 +1,80 @@
 // index.js
 // where your node app starts
 
-// init project
-var express = require('express');
-var app = express();
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const dns = require('dns');
+const urlParser = require('url');
 
-// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
-// so that your API is remotely testable by FCC 
-var cors = require('cors');
-app.use(cors({ optionsSuccessStatus: 200 }));  // some legacy browsers choke on 204
+const app = express();
 
-// http://expressjs.com/en/starter/static-files.html
+// Basic Configuration
+const port = process.env.PORT || 3000;
+
+// Enable CORS for FCC testing
+app.use(cors({ optionsSuccessStatus: 200 }));
+
+// Body parser middleware
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// Serve static files
 app.use(express.static('public'));
 
-// http://expressjs.com/en/starter/basic-routing.html
-app.get("/", function (req, res) {
+// Root route
+app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
 
-// your first API endpoint... 
-app.get("/api/hello", function (req, res) {
-  res.json({ greeting: 'hello API' });
-});
+// Temporary in-memory database
+let urlDatabase = [];
+let counter = 1;
 
-// ✅ WHOAMI API endpoint
-app.get("/api/whoami", (req, res) => {
-  // get IP address, language, and software info from headers
-  const ipaddress = req.ip || req.connection.remoteAddress;
-  const language = req.headers["accept-language"];
-  const software = req.headers["user-agent"];
+// POST endpoint to create short URL
+app.post('/api/shorturl', (req, res) => {
+  const originalUrl = req.body.url;
 
-  res.json({
-    ipaddress: ipaddress,
-    language: language,
-    software: software
+  // Parse and validate URL
+  let hostname;
+  try {
+    const parsedUrl = new URL(originalUrl);
+    hostname = parsedUrl.hostname;
+  } catch (err) {
+    return res.json({ error: 'invalid url' });
+  }
+
+  // DNS lookup to validate host
+  dns.lookup(hostname, (err) => {
+    if (err) {
+      return res.json({ error: 'invalid url' });
+    } else {
+      // Store the URL
+      const shortUrl = counter++;
+      urlDatabase.push({ original_url: originalUrl, short_url: shortUrl });
+
+      res.json({
+        original_url: originalUrl,
+        short_url: shortUrl
+      });
+    }
   });
 });
 
-// Listen on port set in environment variable or default to 3000
-var listener = app.listen(process.env.PORT || 3000, function () {
-  console.log('Your app is listening on port ' + listener.address().port);
+// GET endpoint to redirect to original URL
+app.get('/api/shorturl/:short_url', (req, res) => {
+  const shortUrl = parseInt(req.params.short_url);
+
+  const record = urlDatabase.find(obj => obj.short_url === shortUrl);
+
+  if (record) {
+    res.redirect(record.original_url);
+  } else {
+    res.json({ error: 'No short URL found for the given input' });
+  }
+});
+
+// Start server
+app.listen(port, () => {
+  console.log(`Your app is listening on port ${port}`);
 });
